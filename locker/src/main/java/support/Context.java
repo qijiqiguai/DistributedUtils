@@ -1,4 +1,4 @@
-package util;
+package support;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +12,7 @@ public class Context {
 
     {
         String conf = FileUtil.readFile("classpath:application.properties");
-        if(null != conf && conf.contains("=") ){
+        if( null!=conf && conf.contains("=") ){
             String[] lines = conf.split("\n");
             IntStream.range(0, lines.length).forEach( o -> {
                 String[] oneConf = lines[o].split("=");
