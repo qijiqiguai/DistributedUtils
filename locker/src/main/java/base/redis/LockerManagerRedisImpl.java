@@ -28,7 +28,6 @@ import java.util.function.Function;
 public class LockerManagerRedisImpl implements LockerManager<Boolean> {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
     ExecutorService executor;
-    ScheduledExecutorService timerExec;
     private RedisLocker locker;
     private Jedis jedis;
 
@@ -47,13 +46,6 @@ public class LockerManagerRedisImpl implements LockerManager<Boolean> {
             }
         }
         executor = Executors.newFixedThreadPool(20, new LockedJobTF());
-
-        class LockedJobTimer implements ThreadFactory {
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "Locked-Async-Job-Timer");
-            }
-        }
-        timerExec = Executors.newScheduledThreadPool(10, new LockedJobTimer());
     }
 
 
@@ -81,28 +73,13 @@ public class LockerManagerRedisImpl implements LockerManager<Boolean> {
                 if( conditionMatches ){
                     //调用线程池执行，这样可以有Timeout的机会
                     Future<Boolean> handler = executor.submit(callable);
-                    timerExec.schedule(() -> { // 如果超时了，则取消任务且调用Callback。
-                        // 由于是提交到线程池，所以不能执行完的常见情况是负荷太大，不能按时执行
-                        // 根据文档，允许中断的情况下，cancel不能成功的唯一可能就是已经运行完成了。而本身中断也不保证能够真正停止
-                        // 所以，当超时的时候唯一的做法就是依赖rollback做处理
-                        handler.cancel(true);
-                        try {
-                            // 同步执行，直到完成CallBack, 不以时间限制。潜在风险，其他线程|机器的重试很快完成，这个线程进入了删除步骤，多删除了。
-                            // 此外还可能出现 状态 Rollback 出现问题，原先保存的原始状态在中途可能被其他线程|机器改掉，导致Rollback会冲掉后面的操作
-                            // 概率极低。Lock时间长的话，很难出现。高并发系统中可能出现
-                            // 在相关Entity中增加了跟时间相关的唯一标识ID，这样就不存在多删除的风险了。
-                            // 但是状态更新的Rollback还没有方法可以解决。如果还加锁会出现循环请求锁的可能！！！，此外效率会进一步下降。
-                            rollback.call();
-                        } catch (Exception e) {
-                            logger.info("Locker:" + opsType + "-RunTimeout-Rollback-Fail @ "
-                                    + ServerUtil.getServerName(), e);
-                        }
-                        logger.info("Locker:" + opsType + " @ " + ServerUtil.getServerName(), "RunTimeout");
-                    }, Constants.LOCKER_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+
                     // 这里很容易出异常，CancellationException、ExecutionException、InterruptedException、TimeoutException
+                    // 由于是提交到线程池，所以不能执行完的常见情况是负荷太大，不能按时执行
+                    // 根据文档，允许中断的情况下，cancel不能成功的唯一可能就是已经运行完成了。而本身中断也不保证能够真正停止
+                    // 所以，当超时的时候唯一的做法就是依赖在处理TimeoutException时进行rollback处理
                     Boolean runRes = handler.get(Constants.LOCKER_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                     // 如果正常执行到这里，失败了也是正常情况，否则会抛异常, 所以就不记日志了
-
                     return runRes;
                 }else {
                     logger.info( "Locker:" + opsType + " @ " + ServerUtil.getServerName(),
@@ -110,6 +87,13 @@ public class LockerManagerRedisImpl implements LockerManager<Boolean> {
                     );
                 }
             } catch (Exception e) {
+
+                // 同步执行，直到完成CallBack, 不以时间限制。潜在风险，其他线程|机器的重试很快完成，这个线程进入了删除步骤，多删除了。
+                // 此外还可能出现 状态 Rollback 出现问题，原先保存的原始状态在中途可能被其他线程|机器改掉，导致Rollback会冲掉后面的操作
+                // 不过概率极低。Lock时间长的话，很难出现。高并发系统中可能出现
+                // 在相关Entity中增加了跟时间相关的唯一标识ID，这样就不存在多删除的风险了。
+                // 但是状态更新的Rollback还没有方法可以解决，如果保存了原状态，那么状态可能会变。
+                // 如果还加锁会出现循环请求锁的可能！！！，此外效率会进一步下降。
                 try {
                     rollback.call(); // 真执行异常了，需要回滚
                 } catch (Exception rollbackEx) {
