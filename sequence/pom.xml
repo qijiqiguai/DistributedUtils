@@ -12,7 +12,7 @@
     </parent>
 
     <groupId>tech.qiwang</groupId>
-    <artifactId>common</artifactId>
+    <artifactId>sequence</artifactId>
     <version>0.0.1</version>
 
 
@@ -26,17 +26,10 @@
 
         <redis.client.version>2.9.0</redis.client.version>
         <slf4j.version>1.7.25</slf4j.version>
-        <hutool.version>4.1.14</hutool.version>
     </properties>
 
 
     <dependencies>
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-            <version>${redis.client.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -48,13 +41,6 @@
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>${hutool.version}</version>
-        </dependency>
-
     </dependencies>
 
 </project>
