@@ -5,12 +5,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 
-/**
- * 数据库连接事务，应用于所有service, service类遵从约定：所在包的包名中包含"service"
- *
- * @author shepherd
- */
-
 @Aspect
 @Slf4j
 public class RequireLeaderAdvice {
