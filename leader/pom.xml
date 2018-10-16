@@ -15,7 +15,8 @@
     <version>0.0.1</version>
 
     <properties>
-        <curator.version>4.0.1</curator.version>
+        <!--Curator 4.0 has a hard dependency on ZooKeeper 3.5.x-->
+        <curator.version>3.3.0</curator.version>
         <aspect.version>1.9.1</aspect.version>
         <junit.version>4.12</junit.version>
         <mockito.version>2.23.0</mockito.version>

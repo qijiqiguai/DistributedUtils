@@ -4,5 +4,5 @@ package tech.qiwang;
  * @author qiwang
  */
 public interface Initable {
-    void init();
+    void init() throws Exception;
 }

@@ -17,6 +17,7 @@ import java.io.IOException;
  * 你可以随时查看一个给定的实例是否是leader:
  * public boolean hasLeadership()
  * 一旦不使用LeaderLatch了，必须调用close方法。 如果它是leader,会释放leadership， 其它的参与者将会选举一个leader。
+ * // TODO, 如果此时宕机貌似不会自动释放
  *
  * 与LeaderLatch相比，通过LeaderSelectorListener可以对领导权进行控制， 在适当的时候释放领导权，这样每个节点都有可能获得领导权。
  * 而LeaderLatch一根筋到死， 除非调用close方法，否则它不会释放领导权。
@@ -30,7 +31,6 @@ public class LeaderLatchBasedLeader implements LeaderI {
     public LeaderLatchBasedLeader(final CuratorFramework client, final String electionPath, final String nodeName) throws Exception {
         this.nodeName = nodeName;
         leaderLatch = new LeaderLatch(client, electionPath, nodeName);
-        leaderLatch.start();
     }
 
     @Override
@@ -54,8 +54,8 @@ public class LeaderLatchBasedLeader implements LeaderI {
     }
 
     @Override
-    public void init() {
-
+    public void init() throws Exception {
+        leaderLatch.start();
     }
 
     /**
