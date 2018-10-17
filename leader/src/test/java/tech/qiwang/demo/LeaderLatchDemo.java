@@ -3,10 +3,6 @@ package tech.qiwang.demo;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.junit.Test;
@@ -28,7 +24,7 @@ public final class LeaderLatchDemo {
     private static final String LEADER_LOCK_PATH = "/leader";
 
     @Test
-    public void assertContend() throws Exception {
+    public void demo() throws Exception {
         CuratorFramework client = CuratorFrameworkFactory.newClient(HOST_AND_PORT, new ExponentialBackoffRetry(1000, 3));
         client.start();
 

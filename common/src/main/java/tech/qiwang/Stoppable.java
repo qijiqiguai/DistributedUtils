@@ -6,5 +6,5 @@ import java.io.IOException;
  *  @author qiwang
  */
 public interface Stoppable {
-    void stopMe() throws IOException;
+    void stopMe() throws Exception;
 }

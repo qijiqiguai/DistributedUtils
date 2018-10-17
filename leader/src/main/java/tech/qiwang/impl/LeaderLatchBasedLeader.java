@@ -4,6 +4,7 @@ package tech.qiwang.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import tech.qiwang.MethodNotSupportedException;
 import tech.qiwang.core.LeaderI;
 
@@ -17,7 +18,9 @@ import java.io.IOException;
  * 你可以随时查看一个给定的实例是否是leader:
  * public boolean hasLeadership()
  * 一旦不使用LeaderLatch了，必须调用close方法。 如果它是leader,会释放leadership， 其它的参与者将会选举一个leader。
- * // TODO, 如果此时宕机貌似不会自动释放
+ *
+ * ！！！如果此时宕机或关闭，则当前 机器/线程 对应的 zookeeperPath 依然会存活几秒，因此可能出现几秒钟的无主机的状态。
+ * // TODO, 查询以下存活几秒，是否可以做到实时响应宕机或关闭
  *
  * 与LeaderLatch相比，通过LeaderSelectorListener可以对领导权进行控制， 在适当的时候释放领导权，这样每个节点都有可能获得领导权。
  * 而LeaderLatch一根筋到死， 除非调用close方法，否则它不会释放领导权。
@@ -26,10 +29,8 @@ import java.io.IOException;
 public class LeaderLatchBasedLeader implements LeaderI {
 
     private final LeaderLatch leaderLatch;
-    private final String nodeName;
 
-    public LeaderLatchBasedLeader(final CuratorFramework client, final String electionPath, final String nodeName) throws Exception {
-        this.nodeName = nodeName;
+    public LeaderLatchBasedLeader(final CuratorFramework client, final String electionPath, final String nodeName) {
         leaderLatch = new LeaderLatch(client, electionPath, nodeName);
     }
 
@@ -48,13 +49,31 @@ public class LeaderLatchBasedLeader implements LeaderI {
     }
 
     @Override
-    public boolean resign() throws IOException {
+    public boolean resign() throws Exception {
         leaderLatch.close();
         return true;
     }
 
     @Override
+    public void acquireLeaderSuccessCallback() {
+        // TODO，发布全局消息
+        log.info(leaderLatch.getId() + " Acquire Leader Success: " + leaderLatch.hasLeadership());
+    }
+
+    @Override
     public void init() throws Exception {
+        LeaderLatchBasedLeader _this = this;
+        LeaderLatchListener listener = new LeaderLatchListener(){
+            @Override
+            public void isLeader() {
+                _this.acquireLeaderSuccessCallback();
+            }
+            @Override
+            public void notLeader() {
+                // DoNothing
+            }
+        };
+        leaderLatch.addListener(listener);
         leaderLatch.start();
     }
 
@@ -65,7 +84,7 @@ public class LeaderLatchBasedLeader implements LeaderI {
      * @throws IOException
      */
     @Override
-    public void stopMe() throws IOException {
+    public void stopMe() throws Exception {
         resign();
     }
 }

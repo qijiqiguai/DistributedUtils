@@ -4,8 +4,6 @@ package tech.qiwang.core;
 import tech.qiwang.Initable;
 import tech.qiwang.Stoppable;
 
-import java.io.IOException;
-
 /**
  * 存在众多需要指定主机的场景
  * 1：任务分发
@@ -19,7 +17,7 @@ public interface LeaderI extends Initable, Stoppable {
      * 尝试获取Leader权限
      * @return
      */
-    boolean tryGetLeader();
+    boolean tryGetLeader() throws Exception;
 
     /**
      * 当前节点是否是Leader
@@ -39,5 +37,7 @@ public interface LeaderI extends Initable, Stoppable {
      * 2：释放时不会通知其他节点，比如普通的RedisKey，则其他节点需要轮询当前Leader状态并进行竞争
      * @return
      */
-    boolean resign() throws IOException;
+    boolean resign() throws Exception;
+
+    void acquireLeaderSuccessCallback();
 }
