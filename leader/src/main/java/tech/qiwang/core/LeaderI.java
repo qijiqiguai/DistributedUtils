@@ -10,7 +10,6 @@ import tech.qiwang.Stoppable;
  * 2：定时任务
  * 3：通知
  * 等
- *
  */
 public interface LeaderI extends Initable, Stoppable {
     /**
