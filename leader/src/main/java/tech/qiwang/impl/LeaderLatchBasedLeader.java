@@ -7,7 +7,6 @@ import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import tech.qiwang.MethodNotSupportedException;
 import tech.qiwang.core.LeaderI;
-import java.io.IOException;
 
 
 /**
@@ -78,7 +77,6 @@ public class LeaderLatchBasedLeader implements LeaderI {
 
     @Override
     public void acquireLeaderSuccessCallback() {
-        // TODO，发布全局消息
         log.info(leaderLatch.getId() + " Acquire Leader Success: " + leaderLatch.hasLeadership());
         callback.run();
     }
@@ -89,10 +87,7 @@ public class LeaderLatchBasedLeader implements LeaderI {
     }
 
     /**
-     * // TODO，需要一个全局高优先通知，可能是直接发送通知给管理员。
      * 当关闭该Leader的时候，如果取消权限失败，那么可能导致其他主机再也无法获取权限了！
-     *
-     * @throws IOException
      */
     @Override
     public void stopMe() throws Exception {

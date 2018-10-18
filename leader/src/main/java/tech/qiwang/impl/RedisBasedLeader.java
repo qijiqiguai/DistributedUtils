@@ -21,7 +21,8 @@ public class RedisBasedLeader implements LeaderI {
     private final Runnable callback;
     private final String electionPath;
     private final String nodeName;
-    private final int LEADER_LIFE_SECONDS = 10;
+    private final int LEADER_LIFE_SECONDS = 1;
+    private final int LEADER_COMPETE_CIRCLE_SECONDS = 1;
 
 
     public RedisBasedLeader(final RedisTemplate redisTemplate, final String electionPath, final String nodeName, Runnable callback) {
@@ -37,7 +38,7 @@ public class RedisBasedLeader implements LeaderI {
             (RedisCallback<Boolean>) connection -> connection.setNX(electionPath.getBytes(), nodeName.getBytes())
         );
         if(result) {
-            // LEADER_LIFE_SECONDS 秒内，Leader有效，如果刚好获取了Leader之后，就挂了，那么有 LEADER_LIFE_SECONDS 秒是没有Leader的
+            // LEADER_LIFE_SECONDS 秒内Leader有效，如果刚好获取了Leader之后就挂了，那么最长 有 LEADER_LIFE_SECONDS + LEADER_COMPETE_CIRCLE_SECONDS 秒是没有Leader的
             redisTemplate.expire(electionPath, LEADER_LIFE_SECONDS, TimeUnit.SECONDS);
             acquireLeaderSuccessCallback();
         }else {
@@ -78,6 +79,11 @@ public class RedisBasedLeader implements LeaderI {
         callback.run();
     }
 
+    /**
+     * 由于大部分Redis没有开启Key事件通知，特别是线上环境很难修改配置重启，因此不能依赖于该特性来实现Leader的自动选举。
+     * 因此只能单独搞一个线程循环
+     * @throws Exception
+     */
     @Override
     public void init() throws Exception {
         Timer timer = new Timer();
@@ -87,14 +93,9 @@ public class RedisBasedLeader implements LeaderI {
             public void run() {
                 tryGetLeader();
             }
-        }, 0,1000);
+        }, 0,LEADER_COMPETE_CIRCLE_SECONDS);
     }
 
-    /**
-     * // TODO，需要一个全局高优先通知，可能是直接发送通知给管理员。
-     *
-     * @throws IOException
-     */
     @Override
     public void stopMe() throws Exception {
         resign();
