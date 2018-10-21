@@ -12,6 +12,13 @@ import tech.qiwang.Stoppable;
  * 等
  */
 public interface LeaderI extends Initable, Stoppable {
+
+    /**
+     * 返回当前Leader的标识
+     * @return
+     */
+    String currentLeader() throws Exception;
+
     /**
      * 尝试获取Leader权限
      * @return

@@ -56,6 +56,11 @@ public class LeaderLatchBasedLeader implements LeaderI {
     }
 
     @Override
+    public String currentLeader() throws Exception {
+        return leaderLatch.getLeader().getId();
+    }
+
+    @Override
     public boolean tryGetLeader() {
         if (isLeader()) {
             return true;

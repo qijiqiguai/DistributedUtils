@@ -5,10 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import tech.qiwang.core.LeaderI;
-import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -21,8 +22,13 @@ public class RedisBasedLeader implements LeaderI {
     private final Runnable callback;
     private final String electionPath;
     private final String nodeName;
-    private final int LEADER_LIFE_SECONDS = 1;
-    private final int LEADER_COMPETE_CIRCLE_SECONDS = 1;
+    private AtomicBoolean enabled = new AtomicBoolean(false);
+    private ExecutorService service;
+
+    // milliseconds
+    private final int LEADER_LIFE = 1000;
+    // milliseconds
+    private final int LEADER_COMPETE_CIRCLE = 1000;
 
 
     public RedisBasedLeader(final RedisTemplate redisTemplate, final String electionPath, final String nodeName, Runnable callback) {
@@ -33,13 +39,21 @@ public class RedisBasedLeader implements LeaderI {
     }
 
     @Override
+    public String currentLeader() throws Exception {
+        return getStringValue(electionPath);
+    }
+
+    @Override
     public boolean tryGetLeader() {
+        if(!enabled.get()){
+            return false;
+        }
         boolean result = redisTemplate.execute(
             (RedisCallback<Boolean>) connection -> connection.setNX(electionPath.getBytes(), nodeName.getBytes())
         );
         if(result) {
             // LEADER_LIFE_SECONDS 秒内Leader有效，如果刚好获取了Leader之后就挂了，那么最长 有 LEADER_LIFE_SECONDS + LEADER_COMPETE_CIRCLE_SECONDS 秒是没有Leader的
-            redisTemplate.expire(electionPath, LEADER_LIFE_SECONDS, TimeUnit.SECONDS);
+            redisTemplate.expire(electionPath, LEADER_LIFE, TimeUnit.MILLISECONDS);
             acquireLeaderSuccessCallback();
         }else {
             log.debug("Acquire Leader Fail");
@@ -50,7 +64,7 @@ public class RedisBasedLeader implements LeaderI {
     @Override
     public boolean isLeader() {
         String currentLeader = getStringValue(electionPath);
-        log.info("Current Leader: " + currentLeader);
+        log.debug("Current Leader: " + currentLeader);
         if( null == currentLeader ){
             // 当前没有Leader的情况下，自己主动争取做Leader。
             return tryGetLeader();
@@ -65,9 +79,10 @@ public class RedisBasedLeader implements LeaderI {
 
     @Override
     public boolean resign() throws Exception {
+        enabled.set(false);
         String currentLeader = getStringValue(electionPath);
         // 如果当前就是Leader
-        if( null!=currentLeader || currentLeader.equals(nodeName) ){
+        if( null!=currentLeader && currentLeader.equals(nodeName) ){
             redisTemplate.delete(electionPath);
         }
         return true;
@@ -86,18 +101,26 @@ public class RedisBasedLeader implements LeaderI {
      */
     @Override
     public void init() throws Exception {
-        Timer timer = new Timer();
-        //前一次执行程序结束后 1S 后开始执行下一次程序
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                tryGetLeader();
+        enabled.set(true);
+
+        this.service = Executors.newSingleThreadExecutor(
+                r -> new Thread(r,"RedisBasedLeader-Cycle-Runner"));
+        service.execute(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(LEADER_COMPETE_CIRCLE);
+                    tryGetLeader();
+                    log.debug("RedisBasedLeader-Cycle-Runner Running ...");
+                } catch (InterruptedException e) {
+                    log.error("RedisBasedLeader-Cycle-Runner Run Fail: " + e.getMessage(), e);
+                }
             }
-        }, 0,LEADER_COMPETE_CIRCLE_SECONDS);
+        });
     }
 
     @Override
     public void stopMe() throws Exception {
+        service.shutdown();
         resign();
     }
 
