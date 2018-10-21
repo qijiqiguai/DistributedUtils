@@ -15,6 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Zookeeper生产线至少部属三个节点，有一定维护成本的，一般单体系统中没有必要部属
  * 而Redis基本上是系统标配，在极简主义的角度下，需要基于Redis构建Leader选择器
+ *
+ * TODO: ExecutorService 没有暂停功能，因此在 resign 的时候只能将其关停，在 Init 的时候新建一个。
+ *       其实可以搞一个带暂停的 ExecutorService
  */
 @Slf4j
 public class RedisBasedLeader implements LeaderI {
@@ -85,6 +88,7 @@ public class RedisBasedLeader implements LeaderI {
         if( null!=currentLeader && currentLeader.equals(nodeName) ){
             redisTemplate.delete(electionPath);
         }
+        service.shutdownNow();
         return true;
     }
 
@@ -120,7 +124,6 @@ public class RedisBasedLeader implements LeaderI {
 
     @Override
     public void stopMe() throws Exception {
-        service.shutdown();
         resign();
     }
 
