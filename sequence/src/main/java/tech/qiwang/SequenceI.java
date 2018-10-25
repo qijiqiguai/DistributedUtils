@@ -1,17 +1,25 @@
 package tech.qiwang;
 
+import cn.hutool.core.util.IdUtil;
+
+
+/**
+ * https://www.cnblogs.com/haoxinyue/p/5208136.html
+ */
 public interface SequenceI {
 
-    void config();
+    Boolean init(long start);
 
     /**
-     * 字符串型的唯一ID，最简单的生成方式即用UUID来实现
+     * 采用MongoDB的ID生成策略，这样前四位会隐藏时间信息
      * @return
      */
-    String stringUid();
+    default String stringUid(){
+        return IdUtil.objectId();
+    }
 
     /**
-     * 连续性的数字序列号
+     * 连续性自增数字
      * @return
      */
     Long numberSequence();
@@ -21,6 +29,8 @@ public interface SequenceI {
      * CurrentTimeMillis + Server标记 + 时间段内自增数
      * @return
      */
-    String timeBasedUid();
+    default Long snowflakeId(long workerId, long dcId) {
+        return IdUtil.createSnowflake(workerId, dcId).nextId();
+    }
 
 }

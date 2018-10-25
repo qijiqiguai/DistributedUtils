@@ -25,7 +25,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <slf4j.version>1.7.25</slf4j.version>
-        <hutool.version>4.1.14</hutool.version>
+        <hutool.version>RELEASE</hutool.version>
         <lombok.version>1.18.2</lombok.version>
     </properties>
 
