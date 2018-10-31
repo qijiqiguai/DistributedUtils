@@ -15,11 +15,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class RedisBasedSequence implements SequenceI {
     private final RedisTemplate<String, String> redisTemplate;
-    private final String key;
+    private final String redisKey;
 
     public RedisBasedSequence(RedisTemplate<String, String> template, String redisKey ){
         this.redisTemplate = template;
-        this.key = redisKey;
+        this.redisKey = redisKey;
     }
 
     @Override
@@ -27,7 +27,7 @@ public class RedisBasedSequence implements SequenceI {
         return redisTemplate.execute(new RedisCallback<Boolean>() {
             @Override
             public Boolean doInRedis(RedisConnection connection) throws DataAccessException {
-                return connection.set(key.getBytes(), (start+"").getBytes());
+                return connection.set(redisKey.getBytes(), (start+"").getBytes());
             }
         });
     }
@@ -35,7 +35,7 @@ public class RedisBasedSequence implements SequenceI {
     @Override
     public Long numberSequence() {
         Long result = redisTemplate.execute(
-            (RedisCallback<Long>) connection -> connection.incr(key.getBytes())
+            (RedisCallback<Long>) connection -> connection.incr(redisKey.getBytes())
         );
         return result;
     }
@@ -50,7 +50,7 @@ public class RedisBasedSequence implements SequenceI {
         String random = String.valueOf(100 + new Random().nextInt((999 - 100) + 1));
 
         // 4位核心订单号
-        long result = generateOrderCountStr("orderCount");
+        long result = generateOrderCountStr("OrderCount");
         Assert.isTrue(result<10000, "一秒钟超过10000, 生成失败");
         String redisValue = "X" + String.valueOf(result + 10000L).substring(1);
 
@@ -58,12 +58,13 @@ public class RedisBasedSequence implements SequenceI {
     }
 
     private long generateOrderCountStr(String key) {
+        String serialNumKey = redisKey + ":" + key;
         Long result = redisTemplate.execute(
-                (RedisCallback<Long>) connection -> connection.incr(key.getBytes())
+                (RedisCallback<Long>) connection -> connection.incr(serialNumKey.getBytes())
         );
         if(null != result) {
             if(result == 1) {
-                redisTemplate.expire(key, 1, TimeUnit.SECONDS);
+                redisTemplate.expire(serialNumKey, 1, TimeUnit.SECONDS);
                 return result;
             }
             if(result > 1) {
