@@ -7,6 +7,7 @@ import support.Constants;
 import support.Context;
 import support.LockerException;
 import support.ServerUtil;
+import tech.qiwang.CasOpsI;
 
 import java.util.Random;
 import java.util.concurrent.*;
@@ -25,7 +26,7 @@ import java.util.function.Function;
  *
  * 注：由于是分布式的，所以记日志要带ServerName
  */
-public class LockerManagerRedisImpl implements LockerManager<Boolean> {
+public class LockerManagerRedisImpl implements CasOpsI<Boolean> {
     final Logger logger = LoggerFactory.getLogger(this.getClass());
     ExecutorService executor;
     private RedisLocker locker;
