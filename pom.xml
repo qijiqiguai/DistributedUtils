@@ -14,6 +14,7 @@
         <module>leader</module>
         <module>locker</module>
         <module>sequence</module>
+        <module>mq</module>
     </modules>
 
     <properties>
