@@ -39,11 +39,11 @@ public class KafkaConsumerDemo {
 
         /* 读取数据，读取超时时间为100ms */
         while (true) {
-            Thread.sleep(3000);
+            Thread.sleep(100);
             ConsumerRecords<String, String> records = consumer.poll(100);
             for (ConsumerRecord<String, String> record : records) {
                 System.out.printf("offset = %d, key = %s, value = %s", record.offset(), record.key(), record.value());
-                System.out.println();
+                System.out.println( "  KafkaTimestampType:" + record.timestampType().name + " Delay times: " + (System.currentTimeMillis() - record.timestamp()) );
             }
 
             Map<Integer, Long> endOffsetMap = new HashMap<>();
